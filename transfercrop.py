@@ -162,14 +162,172 @@ class TestingDataset(Dataset):
         img_tensor = self.transform(img).to(self.device)
         class_id = torch.tensor(class_id).to(self.device)
         return img_tensor, class_id
-    
+
+
+class TrainingSet2(Dataset):
+    def __init__(self, device):
+        self.transform = dtransforms['train']
+        self.imgs_path = "result/"
+        self.device = device
+        self.img_path = "thr2-pred-10k.npz"
+        self.npfile = np.load(self.img_path)
+        self.data = []
+        self.imgsorig = self.npfile['pred']
+        self.class_map = {'unsafe': 0, 'safe': 1}
+        self.labels = []
+        self.imgs = []
+        for i in self.imgsorig:
+            for j in i:
+                self.imgs.append(j)
+        for j in range(0, 20):
+            labfile = np.load('labels/'+str(j)+'.npy').tolist()
+            for k in labfile:
+                self.labels.append(k)
+        for i, img in enumerate(self.imgs):
+            if i < 2000:
+                if self.labels[i] == 1:
+                    self.data.append([img, 'safe'])
+                else:
+                    self.data.append([img, 'unsafe'])
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        img, label = self.data[idx]
+        data = img[0]
+        data = data[43:63, 25:45]
+        min = np.min(data)
+        mask = data < min+2
+        coords = np.argwhere(mask)
+        newCoords = list()
+        for j in coords:
+            newCoords.append(j)
+        newCoords = np.asarray(newCoords)
+        xy0 = newCoords.min(axis=0)
+        x0 = xy0[0]
+        y0 = xy0[1]
+        xy1 = newCoords.max(axis=0) + 1
+        x1 = xy1[0]
+        y1 = xy1[1]
+        center = (x0 + x1) / 2, (y0 + y1) / 2
+        img = img[0][int(center[0])-10+45:int(center[0])+10+45, int(center[1])-10+25:int(center[1])+10+25]
+        img = Image.fromarray(img).convert("RGB")
+        class_id = self.class_map[label]
+        # img_tensor = torch.from_numpy(img).to('cuda')
+        img_tensor = self.transform(img).to(self.device)
+        class_id = torch.tensor(class_id).to(self.device)
+        return img_tensor, class_id
+
+
+class TestingSet2(Dataset):
+    def __init__(self, device):
+        self.transform = dtransforms['val']
+        self.imgs_path = "result/"
+        self.device = device
+        self.img_path = "thr2-pred-10k.npz"
+        self.npfile = np.load(self.img_path)
+        self.data = []
+        self.imgsorig = self.npfile['pred']
+        self.class_map = {'unsafe': 0, 'safe': 1}
+        self.labels = []
+        self.imgs = []
+        for i in self.imgsorig:
+            for j in i:
+                self.imgs.append(j)
+        for j in range(0, 20):
+            labfile = np.load('labels/'+str(j)+'.npy').tolist()
+            for k in labfile:
+                self.labels.append(k)
+        for i, img in enumerate(self.imgs):
+            if 1999 < i < 3000:
+                if self.labels[i] == 1:
+                    self.data.append([img, 'safe'])
+                else:
+                    self.data.append([img, 'unsafe'])
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        img, label = self.data[idx]
+        data = img[0]
+        data = data[43:63, 25:45]
+        min = np.min(data)
+        mask = data < min+2
+        coords = np.argwhere(mask)
+        newCoords = list()
+        for j in coords:
+            newCoords.append(j)
+        newCoords = np.asarray(newCoords)
+        xy0 = newCoords.min(axis=0)
+        x0 = xy0[0]
+        y0 = xy0[1]
+        xy1 = newCoords.max(axis=0) + 1
+        x1 = xy1[0]
+        y1 = xy1[1]
+        center = (x0 + x1) / 2, (y0 + y1) / 2
+        img = img[0][int(center[0])-10+45:int(center[0])+10+45, int(center[1])-10+25:int(center[1])+10+25]
+        img = Image.fromarray(img).convert("RGB")
+        class_id = self.class_map[label]
+        # img_tensor = torch.from_numpy(img).to('cuda')
+        img_tensor = self.transform(img).to(self.device)
+        class_id = torch.tensor(class_id).to(self.device)
+        return img_tensor, class_id
 
 def main():
     input_path = 'result/'
 
+    # tests = np.load('thr2-pred-10k.npz')['pred']
+    # num1 = 0
+    # num2 = 0
+    # for m, i in enumerate(tests):
+    #     for n, x in enumerate(i):
+    #         num1 += np.median(x[0])
+    #         num2 += 1
+    #         img1 = Image.fromarray(np.uint8(x[0] * 255), 'L')
+    #         if np.median(x[0]) > 0.582:
+    #             img1.save('imgs/' + str(m*len(i) + n) + '.png')
+    # print('average median:', num1/num2)
+
+    # for m, i in enumerate(tests):
+    #     if m > 9:
+    #         list = []
+    #         test = iter(i)
+    #         for x in test:
+    #             img1 = x[0]
+    #             img2 = next(test)[0]
+    #             img3 = next(test)[0]
+    #             img4 = next(test)[0]
+    #             img5 = next(test)[0]
+    #             img6 = next(test)[0]
+    #             img7 = next(test)[0]
+    #             img8 = next(test)[0]
+    #             img9 = next(test)[0]
+    #             img10 = next(test)[0]
+    #             f, axarr = plt.subplots(2, 5)
+    #             axarr[0, 0].imshow(img1, cmap='gray', vmin=0, vmax=1)
+    #             axarr[0, 1].imshow(img2, cmap='gray', vmin=0, vmax=1)
+    #             axarr[0, 2].imshow(img3, cmap='gray', vmin=0, vmax=1)
+    #             axarr[0, 3].imshow(img4, cmap='gray', vmin=0, vmax=1)
+    #             axarr[0, 4].imshow(img5, cmap='gray', vmin=0, vmax=1)
+    #             axarr[1, 0].imshow(img6, cmap='gray', vmin=0, vmax=1)
+    #             axarr[1, 1].imshow(img7, cmap='gray', vmin=0, vmax=1)
+    #             axarr[1, 2].imshow(img8, cmap='gray', vmin=0, vmax=1)
+    #             axarr[1, 3].imshow(img9, cmap='gray', vmin=0, vmax=1)
+    #             axarr[1, 4].imshow(img10, cmap='gray', vmin=0, vmax=1)
+    #             plt.pause(1)
+    #             ina = input('input here: \n')
+    #             ina = ina.split()
+    #             for i in ina:
+    #                 j = int(i)
+    #                 list.append(j)
+    #         arr = np.asarray(list)
+    #         np.save('labels/' + str(m) + '.npy', arr)
+
+
     global device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     global dtransforms
     dtransforms = {
@@ -190,53 +348,153 @@ def main():
     global dsets
     global dset_loaders
     dsets = {
-        'train': TrainingDataset(device),
-        'val': TestingDataset(device)
+        'train0': TrainingDataset(device),
+        'val0': TestingDataset(device),
+        'train1': TrainingSet2(device),
+        'val1': TestingSet2(device)
     }
 
     dset_loaders = {
-        'train': DataLoader(dsets['train'], batch_size=25, shuffle=True, num_workers=0),
-        'val': DataLoader(dsets['val'], batch_size=25, shuffle=True, num_workers=0)
+        'train0': DataLoader(dsets['train0'], batch_size=25, shuffle=True, num_workers=0),
+        'val0': DataLoader(dsets['val0'], batch_size=25, shuffle=True, num_workers=0),
+        'train1': DataLoader(dsets['train1'], batch_size=25, shuffle=True, num_workers=0),
+        'val1': DataLoader(dsets['val1'], batch_size=25, shuffle=True, num_workers=0)
     }
 
-    # model = models.resnet50(weights=ResNet50_Weights.DEFAULT).to(device)
+    model = models.resnet50(weights=ResNet50_Weights.DEFAULT).to(device)
 
-    # for param in model.parameters():
-    #     param.requires_grad = False
+    for param in model.parameters():
+        param.requires_grad = False
 
-    # model.fc = nn.Sequential(
-    #     nn.Linear(2048, 128).to(device),
-    #     nn.ReLU(inplace=True).to(device),
-    #     nn.Linear(128, 2).to(device)
-    # )
+    model.fc = nn.Sequential(
+        nn.Linear(2048, 128).to(device),
+        nn.ReLU(inplace=True).to(device),
+        nn.Linear(128, 2).to(device)
+    )
 
-    # criterion = nn.CrossEntropyLoss()
-    # optimizer = optim.Adam(model.fc.parameters(), lr=0.01)
-    # scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.fc.parameters(), lr=0.01)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
     torch.cuda.empty_cache()
 
-    # model.load_state_dict(torch.load('model99.pth'))
+    # model.load_state_dict(torch.load('modelcropfixed.pth'))
     # trained_model = train_model(model, criterion, optimizer, scheduler)
-    # torch.save(trained_model.state_dict(), 'modelcropfixed.pth')
+    # torch.save(trained_model.state_dict(), 'modelcropboth3.pth')
 
     sim()
-    
-def sim():
+    sim2()
+
+def sim2():
+    print('\n')
+    print('New Data (w/ Inverted Images)')
+    print('-----------------------------')
     model = models.resnet50()
     model.fc = nn.Sequential(
         nn.Linear(2048, 128),
         nn.ReLU(inplace=True),
         nn.Linear(128, 2)
     )
-    model.load_state_dict(torch.load('modelcropfixed.pth'))
+    model.load_state_dict(torch.load('modelcropfixed.pth', map_location=torch.device('cpu')))
     model.eval()
+    img_path = "thr2-pred-10k.npz"
+    npfile = np.load(img_path)
+    imgsorig = npfile['pred']
+    imgs = []
+    for i in imgsorig:
+        for j in i:
+            imgs.append(j)
+    imgs = imgs[3600:3900]
+    setList = []
+    for idx, i in enumerate(imgs):
+        data = i[0]
+        if np.median(data) > 0.582:
+            setList.append(0)
+        else:
+            setList.append(1)
+        data = data[43:63, 25:45]
+        min = np.min(data)
+        mask = data < min + 2
+        coords = np.argwhere(mask)
+        xy0 = coords.min(axis=0)
+        x0 = xy0[0]
+        y0 = xy0[1]
+        xy1 = coords.max(axis=0) + 1
+        x1 = xy1[0]
+        y1 = xy1[1]
+        center = (x0 + x1) / 2, (y0 + y1) / 2
+        imgs[idx] = Image.fromarray(i[0][int(center[0]) - 10 + 45:int(center[0]) + 10 + 45,
+                                        int(center[1]) - 10 + 25:int(center[1]) + 10 + 25]).convert('RGB')
+
+    validation_batch = torch.stack([dtransforms['val'](img) for img in imgs])
+    pred_tensor = model(validation_batch)
+    predic_probs = F.softmax(pred_tensor, dim=1).cpu().data.numpy()
+    del model.fc
+    del model
+    del pred_tensor
+    model1 = models.resnet50()
+    model1.fc = nn.Sequential(
+        nn.Linear(2048, 128),
+        nn.ReLU(inplace=True),
+        nn.Linear(128, 2)
+    )
+    model1.load_state_dict(torch.load('modelcropboth3.pth', map_location=torch.device('cpu')))
+    model1.eval()
+    pred_tensor1 = model1(validation_batch)
+    predic_probs1 = F.softmax(pred_tensor1, dim=1).cpu().data.numpy()
+    del model1
+    del pred_tensor1
+
+    predic_list = []
+    for n, (x, y) in enumerate(zip(predic_probs, predic_probs1)):
+       if setList[n] == 0:
+            predic_list.append(x)
+       else:
+            predic_list.append(y)
+    validation_labels = []
+    for j in range(0, 20):
+        labfile = np.load('labels/' + str(j) + '.npy').tolist()
+        for k in labfile:
+            validation_labels.append(k)
+    validation_labels = validation_labels[3600:3900]
+
+    runningTotal = 0
+    runningCorrect = 0
+    predictions = []
+    for i in predic_list:
+        if i[0] > i[1]:
+            predictions.append(0)
+        else:
+            predictions.append(1)
+    predictions = np.asarray(predictions)
+    for i, img in enumerate(imgs):
+        runningTotal += 1
+        if predictions[i] == validation_labels[i]:
+            runningCorrect += 1
+    print("Batch: " + str(k))
+    print("Accuracy: " + str((runningCorrect / runningTotal) * 100))
+    f1_scorecalc = f1_score(validation_labels, predictions)
+    print("F1 Score: " + str(f1_scorecalc))
+
+
+
+def sim():
+    print('Old Data')
+    print('--------')
     validation_img_paths = [43, 69, 185, 438, 1481, 1697, 1977, 1984, 2366, 2484, 4, 626,
                             680, 789, 937, 2044, 2224, 2439, 3234, 4175, 4205, 515, 1085]
 
     validation_img = [1824, 1844, 1848, 1854, 1897, 2021, 2906, 3086, 3153, 3249, 3456,
                             3502, 3654, 3857, 3867, 4118, 4228, 4238]
     for k in {1, 2}:
+        model = models.resnet50()
+        model.fc = nn.Sequential(
+            nn.Linear(2048, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 2)
+        )
+        model.load_state_dict(torch.load('modelcropfixed.pth', map_location=torch.device('cpu')))
+        model.eval()
         img_list = []
         if k == 1:
             for img_path in validation_img_paths:
@@ -305,8 +563,13 @@ def sim():
                                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+        setList = []
         for idx, i in enumerate(img_list):
             data = np.asarray(i)
+            if np.median(data) > 0.582:
+                setList.append(0)
+            else:
+                setList.append(1)
             data = data[45:65, 25:45]
             min = np.min(data)
             mask = data < min+2
@@ -323,6 +586,28 @@ def sim():
         validation_batch = torch.stack([dtransforms['val'](img) for img in img_list])
         pred_tensor = model(validation_batch)
         predic_probs = F.softmax(pred_tensor, dim=1).cpu().data.numpy()
+        del pred_tensor
+        del model
+
+        model1 = models.resnet50()
+        model1.fc = nn.Sequential(
+            nn.Linear(2048, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 2)
+        )
+        model1.load_state_dict(torch.load('modelcropboth3.pth', map_location=torch.device('cpu')))
+        model1.eval()
+        pred_tensor1 = model1(validation_batch)
+        predic_probs1 = F.softmax(pred_tensor1, dim=1).cpu().data.numpy()
+        del model1
+        del pred_tensor1
+
+        predic_list = []
+        for n, (x, y) in enumerate(zip(predic_probs, predic_probs1)):
+            if setList[n] == 0:
+                predic_list.append(x)
+            else:
+                predic_list.append(y)
         # _, axes = plt.subplots(1, len(img_list),figsize=(30,5))
 
         runningTotal = 0
@@ -342,10 +627,10 @@ def sim():
         print("Accuracy: " + str((runningCorrect/runningTotal) * 100))
         f1_scorecalc = f1_score(validation_labels, predictions)
         print("F1 Score: " + str(f1_scorecalc))
-        del(pred_tensor)
     
-def train_model(model, criterion, optimizer, scheduler, epochs=6):
+def train_model(model, criterion, optimizer, scheduler, epochs=8):
     for epoch in range(epochs):
+        set = 1
         print('Epoch {}/{}: '.format(epoch, epochs - 1))
         print ('LR: ', scheduler.get_last_lr())
         for state in ['train', 'val']:
@@ -356,7 +641,7 @@ def train_model(model, criterion, optimizer, scheduler, epochs=6):
 
             running_loss = 0.0
             running_corrects = 0
-            for inputs, labels in dset_loaders[state]:
+            for inputs, labels in dset_loaders[state + str(set)]:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
@@ -379,8 +664,8 @@ def train_model(model, criterion, optimizer, scheduler, epochs=6):
                             running_corrects += 1
                     running_loss += loss.item() * inputs.size(0)
             scheduler.step()
-            epoch_loss = running_loss / len(dsets[state])
-            epoch_acc = running_corrects / len(dsets[state])
+            epoch_loss = running_loss / len(dsets[state + str(set)])
+            epoch_acc = running_corrects / len(dsets[state + str(set)])
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(state, epoch_loss, epoch_acc))
 
         print()
