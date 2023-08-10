@@ -29,10 +29,9 @@ def main():
     )
     model.load_state_dict(torch.load('modelcropfixed.pth', map_location=torch.device('cpu')))
     model.eval()
-    img_path = "thr2-pred-10k.npz"
-    npfile = np.load(img_path)
-    imgsorig = npfile['pred']
-    imgs = [imgsorig[0][0]]
+    batch_size = 64
+    imglist = torch.rand((batch_size, 1, 64, 64))
+    imgs = [k for k in imglist.numpy()]
     setList = []
     for idx, i in enumerate(imgs):
         data = i[0]
