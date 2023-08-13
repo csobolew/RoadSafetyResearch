@@ -1,9 +1,12 @@
+from itertools import zip_longest
+
 import numpy as np
 from PIL import Image
 import torch
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, models, transforms
+from torch.utils.data.sampler import WeightedRandomSampler
 import torch.nn as nn
 from torchvision.models import ResNet50_Weights
 from torch.nn import functional as F
@@ -275,10 +278,119 @@ class TestingSet2(Dataset):
         class_id = torch.tensor(class_id).to(self.device)
         return img_tensor, class_id
 
+
+
+class TrainingSet3(Dataset):
+    def __init__(self, device):
+        self.transform = dtransforms['train']
+        self.directory = 'save/'
+        self.device = device
+        self.data = []
+        self.class_map = {'unsafe': 0, 'safe': 1}
+        self.labels = []
+        self.imgs = []
+        for j in range(0, 100):
+            labfile = np.load('labels2/'+str(j)+'.npy').tolist()
+            for k in labfile:
+                self.labels.append(k)
+        for i, im in enumerate(glob.iglob(f'{self.directory}/*')):
+            if i < 1000:
+                if self.labels[i] == 1:
+                    self.data.append([cv2.imread(im, 0) / 255.0, 'safe'])
+                else:
+                    self.data.append([cv2.imread(im, 0) / 255.0, 'unsafe'])
+
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        img, label = self.data[idx]
+        data = img
+        data = data[43:63, 25:45]
+        min = np.min(data)
+        mask = data < min+2
+        coords = np.argwhere(mask)
+        newCoords = list()
+        for j in coords:
+            newCoords.append(j)
+        newCoords = np.asarray(newCoords)
+        # xy0 = newCoords.min(axis=0)
+        # x0 = xy0[0]
+        # y0 = xy0[1]
+        # xy1 = newCoords.max(axis=0) + 1
+        # x1 = xy1[0]
+        # y1 = xy1[1]
+        # center = 54, 32
+        # img = img[int(center[0])-10+45:int(center[0])+10+45, int(center[1])-10+25:int(center[1])+10+25]
+        img = img[43:63, 25:45]
+        img = Image.fromarray(img).convert("RGB")
+        class_id = self.class_map[label]
+        # img_tensor = torch.from_numpy(img).to('cuda')
+        img_tensor = self.transform(img).to(self.device)
+        class_id = torch.tensor(class_id).to(self.device)
+        return img_tensor, class_id
+
+
+class TestingSet3(Dataset):
+    def __init__(self, device):
+        self.transform = dtransforms['val']
+        self.directory = 'save/'
+        self.device = device
+        self.data = []
+        self.class_map = {'unsafe': 0, 'safe': 1}
+        self.labels = []
+        self.imgs = []
+        for j in range(0, 150):
+            labfile = np.load('labels2/'+str(j)+'.npy').tolist()
+            for k in labfile:
+                self.labels.append(k)
+        for i, im in enumerate(glob.iglob(f'{self.directory}/*')):
+            if 999 < i < 1500:
+                if self.labels[i] == 1:
+                    self.data.append([cv2.imread(im, 0) / 255.0, 'safe'])
+                else:
+                    self.data.append([cv2.imread(im, 0) / 255.0, 'unsafe'])
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        img, label = self.data[idx]
+        data = img
+        data = data[43:63, 25:45]
+        min = np.min(data)
+        mask = data < min+2
+        coords = np.argwhere(mask)
+        newCoords = list()
+        for j in coords:
+            newCoords.append(j)
+        newCoords = np.asarray(newCoords)
+        xy0 = newCoords.min(axis=0)
+        x0 = xy0[0]
+        y0 = xy0[1]
+        xy1 = newCoords.max(axis=0) + 1
+        x1 = xy1[0]
+        y1 = xy1[1]
+        center = 54, 32
+        img = img[43:63, 25:45]
+        img = Image.fromarray(img).convert("RGB")
+        class_id = self.class_map[label]
+        # img_tensor = torch.from_numpy(img).to('cuda')
+        img_tensor = self.transform(img).to(self.device)
+        class_id = torch.tensor(class_id).to(self.device)
+        return img_tensor, class_id
+
+def grouper(iterable, n, fillvalue=None):
+    "Collect data into fixed-length chunks or blocks"
+    # grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx"
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
+
 def main():
     input_path = 'result/'
 
-    # tests = np.load('thr2-pred-10k.npz')['pred']
+    # directory = 'save/'
     # num1 = 0
     # num2 = 0
     # for m, i in enumerate(tests):
@@ -289,41 +401,30 @@ def main():
     #         if np.median(x[0]) > 0.582:
     #             img1.save('imgs/' + str(m*len(i) + n) + '.png')
     # print('average median:', num1/num2)
-
-    # for m, i in enumerate(tests):
-    #     if m > 9:
-    #         list = []
-    #         test = iter(i)
-    #         for x in test:
-    #             img1 = x[0]
-    #             img2 = next(test)[0]
-    #             img3 = next(test)[0]
-    #             img4 = next(test)[0]
-    #             img5 = next(test)[0]
-    #             img6 = next(test)[0]
-    #             img7 = next(test)[0]
-    #             img8 = next(test)[0]
-    #             img9 = next(test)[0]
-    #             img10 = next(test)[0]
-    #             f, axarr = plt.subplots(2, 5)
-    #             axarr[0, 0].imshow(img1, cmap='gray', vmin=0, vmax=1)
-    #             axarr[0, 1].imshow(img2, cmap='gray', vmin=0, vmax=1)
-    #             axarr[0, 2].imshow(img3, cmap='gray', vmin=0, vmax=1)
-    #             axarr[0, 3].imshow(img4, cmap='gray', vmin=0, vmax=1)
-    #             axarr[0, 4].imshow(img5, cmap='gray', vmin=0, vmax=1)
-    #             axarr[1, 0].imshow(img6, cmap='gray', vmin=0, vmax=1)
-    #             axarr[1, 1].imshow(img7, cmap='gray', vmin=0, vmax=1)
-    #             axarr[1, 2].imshow(img8, cmap='gray', vmin=0, vmax=1)
-    #             axarr[1, 3].imshow(img9, cmap='gray', vmin=0, vmax=1)
-    #             axarr[1, 4].imshow(img10, cmap='gray', vmin=0, vmax=1)
-    #             plt.pause(1)
-    #             ina = input('input here: \n')
-    #             ina = ina.split()
-    #             for i in ina:
-    #                 j = int(i)
-    #                 list.append(j)
-    #         arr = np.asarray(list)
-    #         np.save('labels/' + str(m) + '.npy', arr)
+    # counter = 0
+    # for i in grouper(glob.iglob(f'{directory}/*'), 10):
+    #     lists = []
+    #     imgs = list(i)
+    #     f, axarr = plt.subplots(2, 5)
+    #     axarr[0, 0].imshow(cv2.imread(imgs[0]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[0, 1].imshow(cv2.imread(imgs[1]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[0, 2].imshow(cv2.imread(imgs[2]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[0, 3].imshow(cv2.imread(imgs[3]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[0, 4].imshow(cv2.imread(imgs[4]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[1, 0].imshow(cv2.imread(imgs[5]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[1, 1].imshow(cv2.imread(imgs[6]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[1, 2].imshow(cv2.imread(imgs[7]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[1, 3].imshow(cv2.imread(imgs[8]), cmap='gray', vmin=0, vmax=1)
+    #     axarr[1, 4].imshow(cv2.imread(imgs[9]), cmap='gray', vmin=0, vmax=1)
+    #     plt.pause(1)
+    #     ina = input('input here: \n')
+    #     ina = ina.split()
+    #     for i in ina:
+    #         j = int(i)
+    #         lists.append(j)
+    #     arr = np.asarray(lists)
+    #     np.save('labels2/' + str(counter) + '.npy', arr)
+    #     counter += 1
 
 
     global device
@@ -351,14 +452,33 @@ def main():
         'train0': TrainingDataset(device),
         'val0': TestingDataset(device),
         'train1': TrainingSet2(device),
-        'val1': TestingSet2(device)
+        'val1': TestingSet2(device),
+        'train2': TrainingSet3(device),
+        'val2': TestingSet3(device)
     }
-
+    safecount = 0
+    unsafecount = 0
+    for i in dsets['train2'].labels:
+        if i == 1:
+            safecount += 1
+        else:
+            unsafecount += 1
+    weights = []
+    for i in dsets['train2'].labels:
+        if i == 1:
+            weights.append(1 / safecount)
+        else:
+            weights.append(1 / unsafecount)
+    sample_weights = np.array(weights)
+    sample_weights = torch.from_numpy(sample_weights)
+    sampler = WeightedRandomSampler(sample_weights.type('torch.DoubleTensor'), len(sample_weights))
     dset_loaders = {
         'train0': DataLoader(dsets['train0'], batch_size=25, shuffle=True, num_workers=0),
         'val0': DataLoader(dsets['val0'], batch_size=25, shuffle=True, num_workers=0),
         'train1': DataLoader(dsets['train1'], batch_size=25, shuffle=True, num_workers=0),
-        'val1': DataLoader(dsets['val1'], batch_size=25, shuffle=True, num_workers=0)
+        'val1': DataLoader(dsets['val1'], batch_size=25, shuffle=True, num_workers=0),
+        'train2': DataLoader(dsets['train2'], batch_size=1, num_workers=0, sampler=sampler),
+        'val2': DataLoader(dsets['val2'], batch_size=1, shuffle=True, num_workers=0)
     }
 
     model = models.resnet50(weights=ResNet50_Weights.DEFAULT).to(device)
@@ -373,17 +493,17 @@ def main():
     )
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.fc.parameters(), lr=0.01)
+    optimizer = optim.Adam(model.fc.parameters(), lr=1e-3)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
     torch.cuda.empty_cache()
 
-    # model.load_state_dict(torch.load('modelcropfixed.pth'))
-    # trained_model = train_model(model, criterion, optimizer, scheduler)
-    # torch.save(trained_model.state_dict(), 'modelcropboth3.pth')
+    model.load_state_dict(torch.load('modelcropfixed.pth'))
+    trained_model = train_model(model, criterion, optimizer, scheduler)
+    torch.save(trained_model.state_dict(), 'modelcropshifted.pth')
 
-    sim()
-    sim2()
+    #sim()
+    #sim2()
 
 def sim2():
     print('\n')
@@ -463,6 +583,7 @@ def sim2():
     predictions = []
     for i in predic_list:
         if i[0] > i[1]:
+            print('test')
             predictions.append(0)
         else:
             predictions.append(1)
@@ -613,7 +734,7 @@ def sim():
         runningTotal = 0
         runningCorrect = 0
         predictions = []
-        for i in predic_probs:
+        for i in predic_list:
             if i[0] > i[1]:
                 predictions.append(0)
             else:
@@ -622,6 +743,8 @@ def sim():
         for i, img in enumerate(img_list):
             runningTotal += 1
             if predictions[i] == validation_labels[i]:
+                if predictions[i] == 0:
+                    print('test2')
                 runningCorrect += 1
         print("Batch: " + str(k))
         print("Accuracy: " + str((runningCorrect/runningTotal) * 100))
@@ -630,7 +753,7 @@ def sim():
     
 def train_model(model, criterion, optimizer, scheduler, epochs=8):
     for epoch in range(epochs):
-        set = 1
+        set = 2
         print('Epoch {}/{}: '.format(epoch, epochs - 1))
         print ('LR: ', scheduler.get_last_lr())
         for state in ['train', 'val']:
@@ -650,10 +773,13 @@ def train_model(model, criterion, optimizer, scheduler, epochs=8):
                 with torch.set_grad_enabled(state == 'train'):
                     outputs = model(inputs.to(device))
                     _, preds = torch.max(outputs, 1)
-                    loss = criterion(outputs, labels.squeeze())
+                    loss = criterion(outputs, labels)
 
                     if state == 'train':
                         loss.backward()
+                        for name, param in model.named_parameters():
+                            if param.grad is not None:
+                                print(name, param.grad.abs().sum())
                         optimizer.step()
                     out = outputs.detach().cpu().numpy()
                     lab = labels.detach().cpu().numpy()

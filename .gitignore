@@ -14,5 +14,4 @@ modelcanny.pth
 modelcrop.pth
 percent.pth
 transfer.py
-vision.py
 archive.tgz

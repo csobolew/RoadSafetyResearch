@@ -27,17 +27,26 @@ def main():
         nn.ReLU(inplace=True),
         nn.Linear(128, 2)
     )
-    model.load_state_dict(torch.load('modelcropfixed.pth', map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load('modelcropshifted.pth', map_location=torch.device('cpu')))
     model.eval()
-    batch_size = 64
-    imglist = torch.rand((batch_size, 1, 64, 64))
-    imgs = [k for k in imglist.numpy()]
+    batch_size = 128
+    img_path = "thr2-pred-10k.npz"
+    npfile = np.load(img_path)
+    imgsorig = npfile['pred']
+    imgs = []
+    for i in imgsorig:
+        for j in i:
+            imgs.append(j)
+    imgs = imgs[3600:3900]
+    # imglist = torch.rand((batch_size, 1, 64, 64))
+    # imgs = [k for k in imglist.numpy()]
     setList = []
     for idx, i in enumerate(imgs):
         data = i[0]
         if np.median(data) > 0.582:
             setList.append(0)
         else:
+            #print(np.median(data))
             setList.append(1)
         data = data[43:63, 25:45]
         min = np.min(data)
@@ -85,7 +94,8 @@ def main():
         else:
             predictions.append(1)
     for i in predictions:
-        print(i)
+        if i == 0:
+            print(i)
 
 
 if __name__ == '__main__':
